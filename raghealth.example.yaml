@@ -1,0 +1,40 @@
+# raghealth configuration — copy to raghealth.yaml and edit
+
+store:
+  type: pgvector                     # pgvector | chroma
+  dsn: postgresql://postgres:PASSWORD@db.YOUR-PROJECT.supabase.co:5432/postgres
+  table: documents
+  columns:
+    id: id
+    content: content
+    embedding: embedding
+    embedded_at: embedded_at         # set to null if your schema has none
+    source_path: metadata->>'source_path'
+    metadata: metadata
+
+# -- or Chroma --
+# store:
+#   type: chroma
+#   path: ./chroma_db
+#   collection: my_docs
+#   source_path_key: source
+#   embedded_at_key: embedded_at
+
+source:
+  type: filesystem                   # filesystem | notion
+  root: ./docs
+  include: ["**/*.md", "**/*.txt"]
+  path_style: relative               # must match what your pipeline stored
+
+# -- or Notion --
+# source:
+#   type: notion
+#   token: env:NOTION_TOKEN
+#   path_style: id                   # id | url
+
+scan:
+  grace_days: 7                      # staleness lag before it's CRITICAL
+  duplicate_threshold: 0.97          # cosine similarity for duplicate pairs
+  include_embeddings: true           # false = skip duplicate check (faster)
+  # assume_embedded_at: 2026-06-01   # fallback if chunks lack embedded_at
+  # limit: 10000                     # cap chunks scanned (big collections)

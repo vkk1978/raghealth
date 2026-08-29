@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>raghealth — demo gallery</title><style>
+:root{--bg:#0f1117;--card:#1a1d27;--text:#e8eaf0;--dim:#8b90a0;--accent:#7c9cff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,'Segoe UI',Roboto,sans-serif;max-width:920px;margin:auto;padding:44px 20px}
+h1{font-size:24px} .sub{color:var(--dim);margin:8px 0 30px;max-width:640px}
+.card{display:block;background:var(--card);border-radius:14px;padding:22px 24px;margin-bottom:18px;text-decoration:none;color:var(--text);border:1px solid transparent}
+.card:hover{border-color:var(--accent)}
+.row{display:flex;gap:12px;align-items:center} .icon{font-size:22px}
+h2{font-size:16px;flex:1} .score{font-size:22px;font-weight:700}
+ul{margin:10px 0 8px 20px;color:var(--dim);font-size:13px}
+.cta{color:var(--accent);font-size:13px}
+code{background:rgba(255,255,255,.06);padding:2px 7px;border-radius:6px}
+footer{color:var(--dim);font-size:13px;margin-top:28px}
+</style></head><body>
+<h1>🩺 raghealth — knowledge-base rot, made visible</h1>
+<p class="sub">Four industries, four AI assistants confidently answering from
+stale, deleted, or conflicting content — while every ops metric stays green.
+Each report below is real raghealth output on a synthetic knowledge base.</p>
+
+<a class="card" href="support.html">
+  <div class="row"><span class="icon">🎧</span>
+    <h2>Customer Support / Help Center</h2>
+    <span class="score" style="color:#ff5c5c">33.3%</span></div>
+  <ul><li>Bot quotes a 14-day refund window; the real policy says 30</li><li>A DELETED holiday-returns article is retrieved at high rank for refund questions</li><li>Two cancellation policies -&gt; contradictory answers ticket-to-ticket</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<a class="card" href="fintech.html">
+  <div class="row"><span class="icon">🏦</span>
+    <h2>Financial Services / Compliance</h2>
+    <span class="score" style="color:#ff5c5c">35.7%</span></div>
+  <ul><li>Assistant cites a superseded KYC threshold 12 days after a regulatory change</li><li>Superseded AML procedure retrieved alongside the current one — screening guidance depends on luck</li><li>The 2026 sanctions update exists but was never ingested</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<a class="card" href="devdocs.html">
+  <div class="row"><span class="icon">📚</span>
+    <h2>Developer Documentation</h2>
+    <span class="score" style="color:#ff5c5c">20.0%</span></div>
+  <ul><li>Bot recommends DELETED v1 auth (api_key in query string) for auth questions</li><li>Rate limits doubled last week; bot still quotes the old numbers</li><li>SDK v3 migration guide exists but was never ingested</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<a class="card" href="hr.html">
+  <div class="row"><span class="icon">🧑‍💼</span>
+    <h2>HR / Internal Policies</h2>
+    <span class="score" style="color:#ff5c5c">50.0%</span></div>
+  <ul><li>&#x27;How many vacation days?&#x27; — the answer depends on which policy version wins retrieval</li><li>Remote-work policy changed after embedding; assistant cites the old rule</li><li>Parental leave policy published but never ingested</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<a class="card" href="manufacturing.html">
+  <div class="row"><span class="icon">🏭</span>
+    <h2>Manufacturing / Quality (ISO 9001)</h2>
+    <span class="score" style="color:#ff5c5c">35.7%</span></div>
+  <ul><li>Lockout/tagout answer reflects the pre-revision procedure</li><li>A torque spec superseded by ECO is still retrievable (obsolete document at a point of use)</li><li>Calibration Rev C and Rev D both indexed — the interval answer depends on retrieval</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<a class="card" href="healthcare.html">
+  <div class="row"><span class="icon">🏥</span>
+    <h2>Healthcare / Clinical Operations</h2>
+    <span class="score" style="color:#ff5c5c">38.5%</span></div>
+  <ul><li>Discharge checklist answer predates the latest revision</li><li>A WITHDRAWN 2024 infection-control protocol is still retrievable for precaution questions</li><li>Q3 formulary update was published but never ingested</li></ul>
+  <span class="cta">open the full health report →</span>
+</a>
+<footer>Scan your own (locally, read-only): <code>pip install raghealth &&
+raghealth init && raghealth scan</code> · MIT · GitHub: vkk1978/raghealth</footer>
+</body></html>

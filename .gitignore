@@ -1,0 +1,18 @@
+__pycache__/
+*.egg-info/
+.venv/
+raghealth.yaml
+canaries.yaml
+canary_baseline.json
+*.db
+report.html
+scan*.json
+queue.json
+kb-docs/
+.DS_Store
+
+# Personal / local — never commit
+CLAUDE.md
+launch/
+.claude/
+dist/

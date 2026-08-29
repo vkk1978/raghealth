@@ -1,0 +1,9 @@
+# Canary queries — copy to canaries.yaml and edit.
+# These are the canonical questions your knowledge base MUST answer well.
+# 10-20 is a good number. Use real questions your users actually ask.
+k: 5
+canaries:
+  - id: refund-window
+    query: "How many days do customers have to request a refund?"
+  - id: vacation-days
+    query: "How many vacation days do employees get?"

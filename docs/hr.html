@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>raghealth report</title><style>
+:root{--bg:#0f1117;--card:#1a1d27;--text:#e8eaf0;--dim:#8b90a0;
+--red:#ff5c5c;--yellow:#ffc555;--green:#4ade80;--accent:#7c9cff;}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.55 -apple-system,'Segoe UI',Roboto,sans-serif;padding:40px 20px;max-width:880px;margin:auto}
+h1{font-size:20px;font-weight:600;letter-spacing:.3px}
+.sub{color:var(--dim);font-size:13px;margin:4px 0 28px}
+.score-card{background:var(--card);border-radius:14px;padding:28px;display:flex;gap:28px;align-items:center;margin-bottom:26px}
+.score{font-size:56px;font-weight:700}
+.stats{display:flex;gap:22px;flex-wrap:wrap}
+.stat b{display:block;font-size:22px}
+.stat span{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+section{background:var(--card);border-radius:14px;padding:22px 24px;margin-bottom:18px}
+section h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px}
+.summary{color:var(--dim);font-size:14px;margin-bottom:14px}
+.finding{border-left:3px solid var(--dim);padding:8px 14px;margin:10px 0;background:rgba(255,255,255,.02);border-radius:0 8px 8px 0}
+.finding.critical{border-color:var(--red)}
+.finding.warning{border-color:var(--yellow)}
+.finding .t{font-weight:600;font-size:14px}
+.finding .d{color:var(--dim);font-size:13px;margin-top:2px}
+.badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:20px;margin-right:8px}
+.badge.critical{background:rgba(255,92,92,.15);color:var(--red)}
+.badge.warning{background:rgba(255,197,85,.15);color:var(--yellow)}
+.badge.info{background:rgba(139,144,160,.15);color:var(--dim)}
+.ok{color:var(--green);font-size:14px}
+footer{color:var(--dim);font-size:12px;text-align:center;margin-top:30px}
+</style></head><body>
+<h1>Knowledge Base Health Report</h1>
+<div class="sub">store: peopleops-vectors · source: peopleops-notion
+ · scanned 2026-07-09 16:28 UTC
+<br>source linking: 100.0% of 4 distinct chunk paths matched</div>
+<div class="score-card">
+  <div class="score" style="color:var(--red)">50.0%</div>
+  <div class="stats">
+    <div class="stat"><b>10</b><span>chunks</span></div>
+    <div class="stat"><b>5</b><span>source docs</span></div>
+    <div class="stat"><b style="color:var(--red)">5</b><span>critical</span></div>
+    <div class="stat"><b style="color:var(--yellow)">1</b><span>warnings</span></div>
+  </div>
+</div>
+<section><h2>staleness</h2><div class="summary">4 of 10 linked chunks (40%) are stale — embedded before their source&#x27;s latest edit.</div><div class="finding critical"><span class="badge critical">critical</span><span class="t">4 stale chunk(s) from &#x27;Remote Work Policy&#x27;</span><div class="d">Source was updated 10 day(s) ago, but these chunks were embedded 40 day(s) BEFORE that update. Retrieval is serving the old version. ⚠ ACTIVE: 1 of these chunks are retrieved by canary &#x27;remote-work&#x27; at rank 1.</div></div></section><section><h2>orphans</h2><div class="summary">1 chunk(s) point at sources that no longer exist; 0 chunk(s) have no source link.</div><div class="finding critical"><span class="badge critical">critical</span><span class="t">1 orphaned chunk(s) → &#x27;hr/vacation-policy-2024&#x27;</span><div class="d">The source document was archived, but its chunks are still in the index and still retrievable. ⚠ ACTIVE: 1 of these chunks are retrieved by canary &#x27;vacation-days&#x27; at rank 1.</div></div></section><section><h2>coverage</h2><div class="summary">3 of 4 live source documents are in the index (75% coverage); 1 never ingested.</div><div class="finding warning"><span class="badge warning">warning</span><span class="t">Never ingested: &#x27;Parental Leave Policy&#x27;</span><div class="d">This document exists in the source system but has no chunks in the index.</div></div></section><section><h2>duplicates</h2><div class="summary">1 near-duplicate pair(s) at similarity ≥ 0.97 among 10 chunks; 1 pair(s) span DIFFERENT sources (potential conflicting answers).</div><div class="finding critical"><span class="badge critical">critical</span><span class="t">Conflicting versions across sources (similarity 1.000)</span><div class="d">sources: &#x27;hr/vacation-policy-2024&#x27; vs &#x27;hr/vacation-policy&#x27;. Retrieval may return contradictory context.<br>&ldquo;Employees receive 15 days of paid vacation.&rdquo; ≈ &ldquo;Employees receive 20 days of paid vacation.&rdquo;</div></div></section><section><h2>blast_radius</h2><div class="summary">Ran 2 canary queries: 2 flagged finding(s) are ACTIVELY retrieved — prioritize these.</div><div class="finding critical"><span class="badge critical">critical</span><span class="t">staleness · hr/remote-work — retrieved by canary &#x27;remote-work&#x27; at rank 1</span><div class="d">This flagged content is not just sitting in the index; it is being served for canonical questions right now. Fix these first.</div></div><div class="finding critical"><span class="badge critical">critical</span><span class="t">orphans · hr/vacation-policy-2024 — retrieved by canary &#x27;vacation-days&#x27; at rank 1</span><div class="d">This flagged content is not just sitting in the index; it is being served for canonical questions right now. Fix these first.</div></div></section>
+<footer>generated by raghealth — freshness monitoring for RAG knowledge bases</footer>
+</body></html>

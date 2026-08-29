@@ -1,0 +1,97 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python-version }}" }
+      - run: pip install -e '.[server]'
+      - run: python tests/test_core.py
+      - run: python tests/test_server.py
+  e2e-pgvector:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: rag, POSTGRES_PASSWORD: rag, POSTGRES_DB: ragdb }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rag" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e '.[pgvector]'
+      - name: seed test bed
+        run: python scripts/seed_testbed.py --dsn postgresql://rag:rag@localhost:5432/ragdb --docs ./kb-docs
+      - name: init + scan (fails on critical findings NOT expected here — rot is expected, so no flag)
+        run: |
+          raghealth init --yes --store pgvector \
+            --dsn postgresql://rag:rag@localhost:5432/ragdb \
+            --source filesystem --source-root ./kb-docs
+          raghealth scan --json scan.json
+      - name: assert expected rot detected
+        run: |
+          python - << 'PY'
+          import json
+          r = json.load(open("scan.json"))
+          score = r["freshness_score"]
+          assert 20 <= score <= 70, f"unexpected score {score}"
+          checks = {x["check"]: x["stats"] for x in r["results"]}
+          assert checks["staleness"]["stale"] == 5, checks["staleness"]
+          assert checks["orphans"]["orphaned"] == 4, checks["orphans"]
+          assert checks["duplicates"]["cross_source_pairs"] >= 1
+          print("e2e OK: score", score)
+          PY
+
+  action-self-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: rag, POSTGRES_PASSWORD: rag, POSTGRES_DB: ragdb }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rag" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: seed test bed + config
+        run: |
+          pip install -e '.[pgvector]'
+          python scripts/seed_testbed.py --dsn postgresql://rag:rag@localhost:5432/ragdb --docs ./kb-docs
+          raghealth init --yes --store pgvector \
+            --dsn postgresql://rag:rag@localhost:5432/ragdb \
+            --source filesystem --source-root ./kb-docs
+      - name: run the action against itself
+        id: kb
+        uses: ./
+        with:
+          config: raghealth.yaml
+          extras: pgvector
+          fail-on-critical: "false"   # rot is expected in the test bed
+      - name: assert outputs
+        run: |
+          test "${{ steps.kb.outputs.critical-findings }}" -ge 3
+          python -c "s=float('${{ steps.kb.outputs.freshness-score }}'); assert 20<=s<=70, s"
+          test -f "${{ steps.kb.outputs.fix-queue }}"
+          echo "action outputs OK: score=${{ steps.kb.outputs.freshness-score }}"
+
+  guide-snippets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e '.[chroma]' langchain-core langchain-chroma llama-index-core
+      - run: python tests/test_guide_snippets.py

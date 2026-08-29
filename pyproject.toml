@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raghealth"
+version = "0.5.1"
+description = "Health checks for RAG knowledge bases: staleness, orphans, duplicates, coverage"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.24", "pyyaml>=6.0", "rich>=13.0"]
+
+[project.urls]
+Homepage = "https://github.com/vkk1978/raghealth"
+Source = "https://github.com/vkk1978/raghealth"
+Issues = "https://github.com/vkk1978/raghealth/issues"
+
+[project.optional-dependencies]
+pgvector = ["psycopg2-binary>=2.9"]
+chroma = ["chromadb>=0.4"]
+notion = ["requests>=2.31"]
+qdrant = ["qdrant-client>=1.9"]
+gdrive = ["requests>=2.31", "google-auth>=2.30"]
+server = ["fastapi>=0.110", "uvicorn>=0.29"]
+all = ["psycopg2-binary>=2.9", "chromadb>=0.4", "requests>=2.31", "qdrant-client>=1.9", "google-auth>=2.30"]
+
+[project.scripts]
+raghealth = "raghealth.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["raghealth*", "raghealth_server*"]

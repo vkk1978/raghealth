@@ -1,0 +1,119 @@
+name: "raghealth — RAG knowledge base health check"
+description: >-
+  Find stale, orphaned, conflicting, and missing chunks in a RAG knowledge
+  base by comparing the vector store against its source of truth. Writes a
+  job-summary report, exposes the freshness score as an output, and can fail
+  the run on critical findings or on regression vs. a baseline scan.
+author: "raghealth"
+branding:
+  icon: "activity"
+  color: "green"
+
+inputs:
+  config:
+    description: "Path to raghealth.yaml in your repository"
+    required: false
+    default: "raghealth.yaml"
+  fail-on-critical:
+    description: "Fail the job if any critical findings exist (true/false)"
+    required: false
+    default: "false"
+  baseline:
+    description: >-
+      Optional path to a previous scan JSON. When set, runs `raghealth diff`
+      and (with fail-on-regression) fails on new findings or a score drop.
+    required: false
+    default: ""
+  fail-on-regression:
+    description: "With baseline set: fail if new findings appeared or score dropped"
+    required: false
+    default: "true"
+  canaries:
+    description: "Optional path to canaries.yaml to enable blast-radius scoring"
+    required: false
+    default: ""
+  extras:
+    description: >-
+      pip extras to install for your connectors, e.g. "pgvector" or
+      "pgvector,notion". Default installs all connectors.
+    required: false
+    default: "all"
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.12"
+
+outputs:
+  freshness-score:
+    description: "Freshness score (0-100) from the scan"
+    value: ${{ steps.scan.outputs.score }}
+  critical-findings:
+    description: "Number of critical findings"
+    value: ${{ steps.scan.outputs.critical }}
+  report-json:
+    description: "Path to the scan JSON report"
+    value: ${{ steps.scan.outputs.report_json }}
+  report-html:
+    description: "Path to the HTML report"
+    value: ${{ steps.scan.outputs.report_html }}
+  fix-queue:
+    description: "Path to the machine-readable fix queue JSON"
+    value: ${{ steps.scan.outputs.fix_queue }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install raghealth (pinned to this action's version)
+      shell: bash
+      run: pip install -q "${{ github.action_path }}[${{ inputs.extras }}]"
+
+    - name: Scan knowledge base
+      id: scan
+      shell: bash
+      run: |
+        set -eo pipefail
+        ARGS=(--config "${{ inputs.config }}" \
+              --json raghealth-report.json \
+              --html raghealth-report.html \
+              --fix-queue raghealth-fix-queue.json)
+        if [ -n "${{ inputs.canaries }}" ]; then
+          ARGS+=(--canaries "${{ inputs.canaries }}")
+        fi
+        if [ "${{ inputs.fail-on-critical }}" = "true" ]; then
+          ARGS+=(--fail-on-critical)
+        fi
+        set +e
+        raghealth scan "${ARGS[@]}"
+        SCAN_EXIT=$?
+        set -e
+        python "${{ github.action_path }}/scripts/action_summary.py" \
+          raghealth-report.json >> "$GITHUB_STEP_SUMMARY"
+        python - << 'PY' >> "$GITHUB_OUTPUT"
+        import json
+        r = json.load(open("raghealth-report.json"))
+        crit = sum(1 for res in r["results"] for f in res["findings"]
+                   if f["severity"] == "critical")
+        print(f"score={r['freshness_score']}")
+        print(f"critical={crit}")
+        print("report_json=raghealth-report.json")
+        print("report_html=raghealth-report.html")
+        print("fix_queue=raghealth-fix-queue.json")
+        PY
+        exit $SCAN_EXIT
+
+    - name: Diff against baseline
+      if: inputs.baseline != ''
+      shell: bash
+      run: |
+        set -eo pipefail
+        FLAGS=""
+        if [ "${{ inputs.fail-on-regression }}" = "true" ]; then
+          FLAGS="--fail-on-regression"
+        fi
+        raghealth diff "${{ inputs.baseline }}" raghealth-report.json $FLAGS \
+          | tee -a "$GITHUB_STEP_SUMMARY" > /dev/null || {
+            echo "::error::knowledge base health regressed vs baseline"; exit 1; }

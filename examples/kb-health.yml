@@ -1,0 +1,45 @@
+# Example: knowledge-base health check on every docs change + weekly schedule.
+# Copy to .github/workflows/kb-health.yml in the repo that holds your docs.
+#
+# Assumes raghealth.yaml at the repo root (run `raghealth init` once locally
+# and commit it — with credentials referenced as env:VARS, never inline).
+
+name: kb-health
+on:
+  pull_request:
+    paths: ["docs/**", "raghealth.yaml"]
+  schedule:
+    - cron: "0 6 * * 1"        # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # REQUIRED: full git history gives raghealth
+                                # reliable timestamps + what-changed summaries
+      - name: Scan knowledge base
+        id: kb
+        uses: vkk1978/raghealth@v0          # pin a release tag
+        env:
+          # your store credentials, referenced from raghealth.yaml as env:…
+          RAGHEALTH_PG_DSN: ${{ secrets.RAGHEALTH_PG_DSN }}
+        with:
+          config: raghealth.yaml
+          extras: pgvector                # install only what you need
+          fail-on-critical: "true"
+          # optional drift gate: commit a known-good scan as baseline.json
+          # baseline: baseline.json
+          # optional blast radius:
+          # canaries: canaries.yaml
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raghealth-reports
+          path: |
+            ${{ steps.kb.outputs.report-html }}
+            ${{ steps.kb.outputs.fix-queue }}

@@ -1,0 +1,27 @@
+# raghealth monitoring server — one command: docker compose up -d
+# Then create a workspace:
+#   docker compose exec server python -m raghealth_server create-workspace acme \
+#     --slack-webhook https://hooks.slack.com/services/...
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - raghealth-data:/data
+    environment:
+      RAGHEALTH_DB: /data/raghealth_server.db
+      # public URL used in alert links (set to your domain when behind TLS):
+      RAGHEALTH_BASE_URL: ${RAGHEALTH_BASE_URL:-http://localhost:8080}
+      # optional email alerts:
+      # RAGHEALTH_SMTP_HOST: smtp.example.com
+      # RAGHEALTH_SMTP_PORT: "587"
+      # RAGHEALTH_SMTP_USER: alerts@example.com
+      # RAGHEALTH_SMTP_PASS: ${SMTP_PASS}
+      # RAGHEALTH_SMTP_FROM: raghealth@example.com
+      # RAGHEALTH_SMTP_TO: team@example.com
+    restart: unless-stopped
+volumes:
+  raghealth-data:
