@@ -250,9 +250,292 @@ def test_filesystem_root_level_files():
         assert paths == {"root-file.md", "sub/nested.md"}, paths
 
 
+# ============================================================== v0.5.4 =====
+# CLI error paths — every misconfiguration should exit non-zero with a
+# friendly stderr message and NO Python traceback.
+
+
+def _run_cli(args, cwd=None):
+    return subprocess.run([sys.executable, "-m", "raghealth.cli", *args],
+                          cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+
+
+def test_scan_missing_config_shows_friendly_error():
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        r = _run_cli(["scan"], cwd=td)
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+        assert "raghealth.yaml" in r.stderr
+
+
+def test_scan_malformed_yaml_shows_friendly_error():
+    import tempfile, pathlib
+    with tempfile.TemporaryDirectory() as td:
+        pathlib.Path(td, "raghealth.yaml").write_text("store: {broken: [",
+                                                       encoding="utf-8")
+        r = _run_cli(["scan"], cwd=td)
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+        assert "YAML" in r.stderr or "yaml" in r.stderr
+
+
+def test_scan_missing_store_section_shows_friendly_error():
+    import tempfile, pathlib
+    with tempfile.TemporaryDirectory() as td:
+        pathlib.Path(td, "raghealth.yaml").write_text(
+            "source:\n  type: filesystem\n  root: ./docs\n", encoding="utf-8")
+        r = _run_cli(["scan"], cwd=td)
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+        assert "store" in r.stderr
+
+
+def test_diff_missing_report_shows_friendly_error():
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        r = _run_cli(["diff", "nope1.json", "nope2.json"], cwd=td)
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+
+
+def test_diff_malformed_json_shows_friendly_error():
+    import tempfile, pathlib
+    with tempfile.TemporaryDirectory() as td:
+        old = pathlib.Path(td, "old.json"); old.write_text("{ not valid json",
+                                                            encoding="utf-8")
+        new = pathlib.Path(td, "new.json"); new.write_text("{}", encoding="utf-8")
+        r = _run_cli(["diff", str(old), str(new)])
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+        assert "JSON" in r.stderr or "json" in r.stderr
+
+
+def test_canary_baseline_missing_config_shows_friendly_error():
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        r = _run_cli(["canary", "baseline"], cwd=td)
+        assert r.returncode != 0
+        assert "Traceback" not in r.stderr, r.stderr
+
+
+# ============================================================================
+# Boundary / empty cases — stub connectors, no live services required.
+
+from raghealth.connectors.base import VectorStoreConnector, SourceConnector
+
+
+class _EmptyStore(VectorStoreConnector):
+    name = "empty-store"
+    def fetch_chunks(self, include_embeddings=True, limit=None):
+        return iter([])
+    def count(self):
+        return 0
+
+
+class _EmptySource(SourceConnector):
+    name = "empty-source"
+    def fetch_documents(self):
+        return iter([])
+
+
+def test_scan_empty_store_no_crash():
+    from raghealth.scanner import scan
+    from raghealth.report import render_json, render_html
+    rep = scan(_EmptyStore(), _EmptySource())
+    assert rep.total_chunks == 0
+    assert rep.total_sources == 0
+    assert isinstance(rep.freshness_score, (int, float))
+    render_json(rep)   # must not raise
+    render_html(rep)   # must not raise
+
+
+def test_scan_all_fresh_reports_high_freshness():
+    from datetime import datetime, timedelta, timezone
+    from raghealth.models import Chunk, SourceDoc
+    from raghealth.scanner import scan
+    from raghealth.report import render_json, render_html
+    now = datetime.now(timezone.utc)
+    embedded = now - timedelta(days=1)
+    class AllFreshStore(VectorStoreConnector):
+        name = "fresh-store"
+        def fetch_chunks(self, include_embeddings=True, limit=None):
+            for i in range(3):
+                yield Chunk(id=f"c-{i}", source_path=f"doc-{i}.md",
+                            content=f"c{i}", embedding=[float(i)] * 8,
+                            embedded_at=embedded)
+        def count(self): return 3
+    class AllFreshSource(SourceConnector):
+        name = "fresh-source"
+        def fetch_documents(self):
+            for i in range(3):
+                yield SourceDoc(f"doc-{i}.md", f"Doc {i}",
+                                embedded - timedelta(days=1))
+    rep = scan(AllFreshStore(), AllFreshSource())
+    assert rep.total_chunks == 3
+    assert rep.freshness_score > 90
+    render_json(rep); render_html(rep)
+
+
+def test_scan_empty_source_flags_orphans():
+    from datetime import datetime, timedelta, timezone
+    from raghealth.models import Chunk
+    from raghealth.scanner import scan
+    now = datetime.now(timezone.utc)
+    class OrphanStore(VectorStoreConnector):
+        name = "orphan-store"
+        def fetch_chunks(self, include_embeddings=True, limit=None):
+            yield Chunk(id="c-1", source_path="deleted.md", content="x",
+                        embedding=[1.0] * 8,
+                        embedded_at=now - timedelta(days=5))
+        def count(self): return 1
+    rep = scan(OrphanStore(), _EmptySource())
+    assert rep.total_sources == 0
+    orphans = next(r for r in rep.results if r.check == "orphans")
+    assert orphans.stats.get("orphaned", 0) >= 1
+
+
+# ============================================================================
+# JSON schema stability — locks in the top-level output shape so users'
+# CI integrations don't break silently when we refactor.
+
+
+def test_json_schema_top_level_stable():
+    import json
+    from raghealth.demo import build_demo_report
+    from raghealth.report import render_json
+    d = json.loads(render_json(build_demo_report()))
+    assert set(d.keys()) >= {"scanned_at", "store_name", "source_name",
+                              "total_chunks", "total_sources",
+                              "freshness_score", "results", "link_stats"}
+    assert isinstance(d["freshness_score"], (int, float))
+    assert isinstance(d["results"], list) and len(d["results"]) > 0
+    for r in d["results"]:
+        assert set(r.keys()) >= {"check", "summary", "findings", "stats"}
+        for f in r["findings"]:
+            assert set(f.keys()) >= {"severity", "title", "detail",
+                                      "chunk_ids", "source_path", "data"}
+
+
+# ============================================================================
+# Metadata edge cases
+
+
+def test_scan_missing_source_path_flagged_as_unlinked():
+    from datetime import datetime, timedelta, timezone
+    from raghealth.models import Chunk
+    from raghealth.scanner import scan
+    now = datetime.now(timezone.utc)
+    class UnlinkedStore(VectorStoreConnector):
+        name = "unlinked-store"
+        def fetch_chunks(self, include_embeddings=True, limit=None):
+            yield Chunk(id="orphan-1", content="mystery",
+                        embedding=[1.0] * 8,
+                        embedded_at=now - timedelta(days=10))
+        def count(self): return 1
+    rep = scan(UnlinkedStore(), _EmptySource())
+    assert rep.total_chunks == 1
+    orphans = next(r for r in rep.results if r.check == "orphans")
+    # key: unlinked chunks are surfaced under 'orphans', not silently dropped
+    assert (orphans.stats.get("unlinked", 0)
+            + orphans.stats.get("no_source", 0)
+            + orphans.stats.get("orphaned", 0)) >= 1
+
+
+def test_scan_unicode_source_path_no_crash():
+    from datetime import datetime, timedelta, timezone
+    from raghealth.models import Chunk, SourceDoc
+    from raghealth.scanner import scan
+    from raghealth.report import render_html, render_json
+    now = datetime.now(timezone.utc)
+    weird = "docs/spaces and üñîçøde/policy—v2.md"
+    class UStore(VectorStoreConnector):
+        name = "u-store"
+        def fetch_chunks(self, include_embeddings=True, limit=None):
+            yield Chunk(id="u-1", source_path=weird, content="x",
+                        embedding=[1.0] * 8,
+                        embedded_at=now - timedelta(days=5))
+        def count(self): return 1
+    class USource(SourceConnector):
+        name = "u-src"
+        def fetch_documents(self):
+            yield SourceDoc(weird, "policy v2", now - timedelta(days=1))
+    rep = scan(UStore(), USource())
+    assert rep.total_chunks == 1
+    # both renderers must handle unicode paths without exceptions
+    render_html(rep); render_json(rep)
+
+
+# ============================================================================
+# Idempotency — two scans of the same state must produce identical output
+# (except the scanned_at timestamp). Guards against nondeterministic ordering.
+
+
+def test_scan_is_idempotent():
+    """Two scans of the same state produce identical deterministic parts.
+    (Ages/timestamps drift by milliseconds between calls — compare structure only.)"""
+    from raghealth.demo import _DemoStore, _DemoSource
+    from raghealth.scanner import scan
+    r1 = scan(_DemoStore(), _DemoSource())
+    r2 = scan(_DemoStore(), _DemoSource())
+    assert r1.total_chunks == r2.total_chunks
+    assert r1.total_sources == r2.total_sources
+    assert r1.freshness_score == r2.freshness_score
+    assert [r.check for r in r1.results] == [r.check for r in r2.results]
+    for c1, c2 in zip(r1.results, r2.results):
+        assert len(c1.findings) == len(c2.findings), c1.check
+        assert c1.stats.keys() == c2.stats.keys(), c1.check
+        # severities are deterministic; titles too
+        assert [f.severity for f in c1.findings] == [f.severity for f in c2.findings]
+        assert [f.chunk_ids for f in c1.findings] == [f.chunk_ids for f in c2.findings]
+
+
+# ============================================================================
+# Fix queue — contract that users' ingestion pipelines depend on.
+
+
+def test_fix_queue_empty_when_no_findings():
+    import json
+    from raghealth.queue import render_queue_json
+    from raghealth.scanner import scan
+    rep = scan(_EmptyStore(), _EmptySource())
+    q = json.loads(render_queue_json(rep))
+    assert q["version"] == 1
+    assert q["actions"] == []
+    assert q["summary"]["chunks_affected"] == 0
+
+
+def test_fix_queue_ordered_critical_first():
+    """Actions must be sorted critical -> warning -> info so pipelines fix
+    the most damaging rot first."""
+    import json
+    from raghealth.queue import render_queue_json
+    from raghealth.demo import build_demo_report
+    q = json.loads(render_queue_json(build_demo_report()))
+    priority = {"critical": 0, "warning": 1, "info": 2}
+    ranks = [priority.get(a["priority"], 9) for a in q["actions"]]
+    assert ranks == sorted(ranks), (
+        f"queue not ordered by priority: {[a['priority'] for a in q['actions']]}")
+    assert set(q["summary"].keys()) >= {"chunks_affected"}
+
+
+def test_fix_queue_schema_stable():
+    """Locks in the fix-queue JSON contract that ingestion scripts consume."""
+    import json
+    from raghealth.queue import render_queue_json
+    from raghealth.demo import build_demo_report
+    q = json.loads(render_queue_json(build_demo_report()))
+    assert set(q.keys()) >= {"version", "generated_at", "store",
+                              "actions", "summary"}
+    for a in q["actions"]:
+        assert set(a.keys()) >= {"action", "reason", "priority"}
+        assert a["action"] in {"reembed", "delete", "ingest", "review_conflict"}
+        assert a["priority"] in {"critical", "warning", "info"}
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:
         fn()
-        print(f"✓ {fn.__name__}")
+        print(f"[ok] {fn.__name__}")
     print(f"\n{len(fns)} tests passed")

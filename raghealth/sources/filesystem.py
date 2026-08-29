@@ -90,19 +90,19 @@ class FilesystemSource(SourceConnector):
 
     def _record_path(self, p: Path) -> str:
         if self.path_style == "absolute":
-            return str(p)
+            return p.as_posix()
         if self.path_style == "name":
             return p.name
-        return str(p.relative_to(self.root))
+        return p.relative_to(self.root).as_posix()
 
     def fetch_documents(self) -> Iterable[SourceDoc]:
         for p in sorted(self.root.rglob("*")):
             if not p.is_file():
                 continue
-            rel = str(p.relative_to(self.root))
+            rel = p.relative_to(self.root).as_posix()
             if rel.startswith(".git/") or not self._matches(rel):
                 continue
-            git_key = (str(p.relative_to(self._git_root))
+            git_key = (p.relative_to(self._git_root).as_posix()
                        if self._git_root else rel)
             modified = self._git_times.get(git_key) or datetime.fromtimestamp(
                 p.stat().st_mtime, tz=timezone.utc)

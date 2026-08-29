@@ -199,7 +199,54 @@ def main(argv: list[str] | None = None) -> int:
     d.set_defaults(func=cmd_demo)
 
     args = p.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except FileNotFoundError as e:
+        print(f"error: file not found: {e.filename or e}", file=sys.stderr)
+        if "raghealth.yaml" in str(e) or (e.filename and "raghealth.yaml" in str(e.filename)):
+            print("hint: run `raghealth init` to create raghealth.yaml, "
+                  "or pass `--config <path>`.", file=sys.stderr)
+        return 2
+    except _yaml_error() as e:
+        print(f"error: invalid YAML in config file: {e}", file=sys.stderr)
+        return 2
+    except _json_error() as e:
+        print(f"error: invalid JSON in report file: {e}", file=sys.stderr)
+        return 2
+    except ValueError as e:
+        # config-shape errors (raised by load_config / build_store / build_source)
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except _pg_operational_error() as e:
+        msg = str(e).splitlines()[0] if str(e) else "connection failed"
+        print(f"error: cannot connect to Postgres: {msg}", file=sys.stderr)
+        print("hint: verify DSN, network, and that pgvector is reachable.",
+              file=sys.stderr)
+        return 2
+    except KeyboardInterrupt:
+        print("\ninterrupted.", file=sys.stderr)
+        return 130
+
+
+def _yaml_error():
+    try:
+        import yaml
+        return yaml.YAMLError
+    except ImportError:
+        return type("_Unreachable", (Exception,), {})
+
+
+def _json_error():
+    import json
+    return json.JSONDecodeError
+
+
+def _pg_operational_error():
+    try:
+        import psycopg2
+        return psycopg2.OperationalError
+    except ImportError:
+        return type("_Unreachable", (Exception,), {})
 
 
 if __name__ == "__main__":
