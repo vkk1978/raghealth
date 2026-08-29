@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python-version }}" }
-      - run: pip install -e '.[server]'
+      - run: pip install -e '.[server,test]'
       - run: python tests/test_core.py
       - run: python tests/test_server.py
   e2e-pgvector:

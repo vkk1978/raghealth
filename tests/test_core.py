@@ -96,6 +96,46 @@ def test_cli_demo_exits_zero():
     assert out.returncode == 0 and "knowledge base health" in out.stdout
 
 
+def test_cli_version_flag():
+    """`raghealth --version` must return 0 and print a version string."""
+    from raghealth import __version__
+    out = subprocess.run([sys.executable, "-m", "raghealth.cli", "--version"],
+                         capture_output=True, text=True, encoding="utf-8")
+    assert out.returncode == 0
+    assert __version__ in out.stdout
+    assert "raghealth" in out.stdout
+
+
+def test_all_subcommand_help():
+    """Every subcommand's --help must parse cleanly (catches broken argparse setup)."""
+    for cmd in ["scan", "canary", "diff", "init", "agent", "demo"]:
+        out = subprocess.run([sys.executable, "-m", "raghealth.cli", cmd, "--help"],
+                             capture_output=True, text=True, encoding="utf-8")
+        assert out.returncode == 0, f"{cmd} --help failed: {out.stderr}"
+        assert "usage:" in out.stdout, f"{cmd} --help had no usage line"
+
+
+def test_demo_html_survives_windows_cp1252_env():
+    """Regression (v0.5.2): raghealth demo --html crashed on Windows because
+    Path.write_text defaults to cp1252, which cannot encode U+26A0 (⚠).
+    Simulate the crash environment by forcing PYTHONIOENCODING=cp1252."""
+    import os, tempfile
+    from pathlib import Path as _P
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
+    with tempfile.TemporaryDirectory() as td:
+        out_html = _P(td, "r.html")
+        out_json = _P(td, "r.json")
+        r = subprocess.run(
+            [sys.executable, "-m", "raghealth.cli", "demo",
+             "--html", str(out_html), "--json", str(out_json)],
+            env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        assert r.returncode == 0, f"CLI failed under cp1252: {r.stderr}"
+        assert out_html.exists() and out_html.stat().st_size > 1000
+        assert out_json.exists() and out_json.stat().st_size > 500
+        # confirm the ⚠ glyph actually survives round-trip
+        assert "⚠" in out_html.read_text(encoding="utf-8")
+
+
 
 
 # ------------------------------------------------------------- v0.3 ----

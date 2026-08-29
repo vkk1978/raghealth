@@ -135,6 +135,26 @@ too. The core suite is DB-free; the server suite uses FastAPI's TestClient
 and a throwaway SQLite file. The full end-to-end path (init → scan → diff →
 canaries against real Postgres) is exercised by the test bed above.
 
+### Testing coverage — platforms and depth
+
+**Automated CI** (GitHub Actions, `ubuntu-latest`, Python 3.10 / 3.11 / 3.12) — runs on every push:
+- Unit + integration tests in `tests/test_core.py` and `tests/test_server.py`
+- End-to-end scan against live pgvector (`e2e-pgvector` job in `.github/workflows/ci.yml`)
+- GitHub Action self-test against live pgvector (`action-self-test` job)
+- LangChain / LlamaIndex snippet execution (`guide-snippets` job)
+
+**Manual smoke testing (v0.5.3):** Windows 11 / Python 3.11 — install from PyPI, `raghealth --version`, `demo`, `demo --html`, `demo --json`, all `--help` subcommands, `init --help`.
+
+**Platforms and paths not yet covered:**
+- **macOS** — untested. Community help wanted; if you run raghealth on macOS, please open an issue with anything you hit.
+- **Windows in CI** — planned for v0.6 (matrix expansion of the `test` job to include `windows-latest`). A Windows-specific regression test (`test_demo_html_survives_windows_cp1252_env`) is already in the suite and runs on Linux CI to guard against the class of bug, but a true Windows runner is the durable fix.
+- **Live Notion / Google Drive** — connectors have unit tests with mocked APIs, no live-service integration test.
+
+**Known Windows quirks (fixed in v0.5.2, hardened in v0.5.3):**
+- All raghealth file writes (HTML / JSON / YAML / fix queue) explicitly use UTF-8. Windows default is cp1252, which cannot encode the `⚠` glyph in reports.
+- On Windows, `raghealth` reconfigures `sys.stdout` / `sys.stderr` to UTF-8 at CLI start so Rich terminal output survives subprocess / CI / piped contexts.
+- `FilesystemSource` may return paths with `\` separators on Windows; if you scan content embedded on one platform from another, normalize to forward slashes in your chunk metadata. The path matcher (`raghealth.matching.normalize`) already handles both — see `test_normalize` for the guarantees.
+
 ## 4. Real-world connector setup
 
 ### Supabase / pgvector

@@ -127,12 +127,13 @@ def cmd_demo(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    if sys.platform == "win32":
-        for stream in (sys.stdout, sys.stderr):
-            if hasattr(stream, "reconfigure"):
-                stream.reconfigure(encoding="utf-8", errors="replace")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+    from . import __version__
     p = argparse.ArgumentParser(prog="raghealth",
                                 description="Health checks for RAG knowledge bases")
+    p.add_argument("--version", action="version", version=f"raghealth {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     s = sub.add_parser("scan", help="scan a vector store against its source of truth")
