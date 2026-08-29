@@ -121,7 +121,7 @@ def run_init(args) -> int:
            "scan": {"grace_days": 7, "duplicate_threshold": 0.97,
                     "include_embeddings": True}}
     out = Path(getattr(args, "config", None) or "raghealth.yaml")
-    out.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False))
+    out.write_text(yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False), encoding="utf-8")
     console.print(f"\n[green]✓[/green] wrote [bold]{out}[/bold]")
     console.print("Next: [bold]raghealth scan --html report.html[/bold]")
     return 0

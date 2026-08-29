@@ -48,7 +48,7 @@ class CanarySet:
 
     @classmethod
     def load(cls, path: str) -> "CanarySet":
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         canaries = [Canary(id=c["id"], query=c["query"])
                     for c in raw.get("canaries", [])]
@@ -183,10 +183,10 @@ def apply_blast_radius(check_results: list[CheckResult],
 
 
 def save_json(payload: dict, path: str) -> None:
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
 
 def load_json(path: str) -> dict:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)

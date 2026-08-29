@@ -11,7 +11,7 @@ from .connectors.base import SourceConnector, VectorStoreConnector
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
     for key in ("store", "source"):
         if key not in cfg:

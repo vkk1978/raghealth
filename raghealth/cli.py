@@ -14,14 +14,14 @@ def _write_outputs(report, args) -> None:
     from .report import render_html, render_json, render_terminal
     render_terminal(report)
     if args.html:
-        Path(args.html).write_text(render_html(report))
+        Path(args.html).write_text(render_html(report), encoding="utf-8")
         print(f"\nHTML report written to {args.html}")
     if args.json:
-        Path(args.json).write_text(render_json(report))
+        Path(args.json).write_text(render_json(report), encoding="utf-8")
         print(f"JSON report written to {args.json}")
     if getattr(args, "fix_queue", None):
         from .queue import render_queue_json
-        Path(args.fix_queue).write_text(render_queue_json(report))
+        Path(args.fix_queue).write_text(render_queue_json(report), encoding="utf-8")
         print(f"fix queue written to {args.fix_queue}")
 
 
@@ -127,6 +127,10 @@ def cmd_demo(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if sys.platform == "win32":
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(prog="raghealth",
                                 description="Health checks for RAG knowledge bases")
     sub = p.add_subparsers(dest="command", required=True)

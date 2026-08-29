@@ -92,7 +92,7 @@ def test_demo_scan_and_redact():
 
 def test_cli_demo_exits_zero():
     out = subprocess.run([sys.executable, "-m", "raghealth.cli", "demo"],
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, encoding="utf-8")
     assert out.returncode == 0 and "knowledge base health" in out.stdout
 
 

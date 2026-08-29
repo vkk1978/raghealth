@@ -14,7 +14,7 @@ OUT.mkdir(exist_ok=True)
 cards = []
 for key, sc in SCENARIOS.items():
     report = sc.run()
-    (OUT / f"{key}.html").write_text(render_html(report))
+    (OUT / f"{key}.html").write_text(render_html(report), encoding="utf-8")
     points = "".join(f"<li>{html.escape(h)}</li>" for h in sc.headlines)
     color = ("#4ade80" if report.freshness_score >= 90
              else "#ffc555" if report.freshness_score >= 70 else "#ff5c5c")
@@ -51,5 +51,5 @@ Each report below is real raghealth output on a synthetic knowledge base.</p>
 <footer>Scan your own (locally, read-only): <code>pip install raghealth &&
 raghealth init && raghealth scan</code> · MIT · GitHub: vkk1978/raghealth</footer>
 </body></html>"""
-(OUT / "index.html").write_text(index)
+(OUT / "index.html").write_text(index, encoding="utf-8")
 print(f"wrote {len(SCENARIOS) + 1} pages to {OUT}/")
