@@ -12,7 +12,7 @@ kb-docs/
 .DS_Store
 
 # Personal / local — never commit
-CLAUDE.md
+*[Cc][Ll]*[Dd]*.md
 launch/
-.claude/
+.[Cc][Ll]*[Dd]*/
 dist/
