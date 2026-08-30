@@ -6,7 +6,7 @@ You do not need to add instrumentation to your ingestion pipeline or make change
 
 ## Why raghealth exists
 
-A RAG index does not fail loudly when it goes out of sync with the documents it was built from. Similarity scores continue to look healthy even when the underlying chunks have become outdated, have been orphaned by a source deletion, or now duplicate one another with conflicting content. Because the similarity score itself cannot distinguish a fresh chunk from an outdated one, teams often discover the drift only when an end user notices a wrong or missing answer.
+A RAG index does not fail loudly when it goes out of sync with the documents it was built from. Similarity scores continue to look healthy even when the source document behind a chunk has been edited since the chunk was embedded, has been deleted, or now has multiple versions in the index with conflicting content. Cosine similarity measures semantic similarity between a query and a chunk. It has no signal for whether the chunk still reflects the current source, so teams often discover the drift only when an end user notices a wrong or missing answer.
 
 raghealth closes this gap. It validates the index against its sources directly, using metadata and vectors that are already stored in your database, so a health check does not require any additional embedding calls or external API cost.
 
@@ -16,12 +16,12 @@ raghealth reports four categories of divergence between the vector store and its
 
 | Check | Question the check answers | Failure mode the check catches |
 |---|---|---|
-| Staleness | Was the source document edited after the chunk was embedded? | The assistant confidently returns last quarter's policy. |
+| Staleness | Was the source document edited after the chunk was embedded? | The assistant returns last quarter's policy because the current one has not been re-embedded. |
 | Orphans | Does the chunk's source document still exist? | Deleted or archived documents continue to be retrieved and cited. |
 | Duplicates | Are near-identical chunks arriving from different sources? | Two versions of the same fact produce contradictory answers. |
 | Coverage | Which live documents were never ingested? | The assistant answers "I don't know" for knowledge that is available. |
 
-Every check operates on data that is already inside your vector store. raghealth does not create new embeddings during a scan, so the cost of a scan is zero on your embedding provider.
+Every check operates on data that is already inside your vector store. The four checks do not create new embeddings during a scan, so a check-only scan incurs no cost on your embedding provider. The optional canary-query feature described later in this document does require an embedder in order to embed the canary questions themselves.
 
 ## What raghealth supports today
 
@@ -206,7 +206,7 @@ The agent pushes only findings metadata to the server. The metadata consists of 
 
 ### The server
 
-The server accepts findings metadata from one or more agents, stores snapshot history in SQLite, renders a shareable read-only trend dashboard at `/d/<token>`, and sends Slack and email alerts when the freshness score drops, when the score falls below a configured threshold, or when new findings appear compared with the previous snapshot. The server is designed to run on a small virtual machine, and a $5-per-month instance is sufficient for typical workloads.
+The server accepts findings metadata from one or more agents, stores snapshot history in SQLite, renders a shareable read-only trend dashboard at `/d/<token>`, and sends Slack and email alerts when the freshness score drops, when the score falls below a configured threshold, or when new findings appear compared with the previous snapshot. The server is designed to run on a small virtual machine, and a low-tier instance is sufficient for typical workloads.
 
 ```bash
 pip install 'raghealth[server]'
