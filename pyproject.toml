@@ -21,10 +21,11 @@ pgvector = ["psycopg2-binary>=2.9"]
 chroma = ["chromadb>=0.4"]
 notion = ["requests>=2.31"]
 qdrant = ["qdrant-client>=1.9"]
+weaviate = ["weaviate-client>=4.7,<5"]
 gdrive = ["requests>=2.31", "google-auth>=2.30"]
 server = ["fastapi>=0.110", "uvicorn>=0.29"]
-test = ["httpx>=0.27"]
-all = ["psycopg2-binary>=2.9", "chromadb>=0.4", "requests>=2.31", "qdrant-client>=1.9", "google-auth>=2.30"]
+test = ["httpx>=0.27", "pytest>=7.0"]
+all = ["psycopg2-binary>=2.9", "chromadb>=0.4", "requests>=2.31", "qdrant-client>=1.9", "weaviate-client>=4.7,<5", "google-auth>=2.30"]
 
 [project.scripts]
 raghealth = "raghealth.cli:main"

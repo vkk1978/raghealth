@@ -1,0 +1,24 @@
+# Local Weaviate for running raghealth's Weaviate integration test.
+#
+# Start:  docker compose -f tests/docker-compose.weaviate.yml up -d
+# Stop:   docker compose -f tests/docker-compose.weaviate.yml down
+#
+# Then run:  pytest tests/test_weaviate_connector.py -v
+services:
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.28.4
+    ports:
+      - "8080:8080"       # REST
+      - "50051:50051"     # gRPC
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      ENABLE_MODULES: ""
+      CLUSTER_HOSTNAME: "node1"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
